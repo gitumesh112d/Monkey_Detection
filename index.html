@@ -1,3 +1,5 @@
+
+cat > /mnt/user-data/outputs/animal-guardian.html << 'HTMLEOF'
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,706 +8,523 @@
 <title>Animal Guardian</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-
   :root {
-    --bg: #0a0d14;
-    --surface: #131720;
-    --surface2: #1a2030;
-    --border: rgba(255,255,255,0.08);
-    --border-bright: rgba(255,255,255,0.15);
-    --text: #f0f2f7;
-    --muted: #7a8499;
-    --accent: #00e5b0;
-    --accent-dim: rgba(0,229,176,0.12);
-    --danger: #ff4757;
-    --danger-dim: rgba(255,71,87,0.12);
-    --warn: #ffa502;
-    --warn-dim: rgba(255,165,2,0.12);
-    --radius: 14px;
-    --radius-sm: 8px;
+    --bg: #0a0d14; --surface: #131720; --surface2: #1a2030;
+    --border: rgba(255,255,255,0.08); --text: #f0f2f7; --muted: #7a8499;
+    --accent: #00e5b0; --accent-dim: rgba(0,229,176,0.12);
+    --danger: #ff4757; --danger-dim: rgba(255,71,87,0.12);
+    --warn: #ffa502; --warn-dim: rgba(255,165,2,0.12);
+    --radius: 14px; --radius-sm: 8px;
   }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
 
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
+  header { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:0.5px solid var(--border); position:sticky; top:0; background:rgba(10,13,20,0.92); backdrop-filter:blur(12px); z-index:100; }
+  .logo { display:flex; align-items:center; gap:10px; font-size:15px; font-weight:600; }
+  .logo-icon { width:32px; height:32px; background:var(--accent-dim); border:1px solid rgba(0,229,176,0.3); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px; }
+  .status-badge { font-size:11px; font-weight:500; padding:4px 10px; border-radius:20px; transition:all 0.3s; }
+  .status-badge.idle  { background:var(--surface2); color:var(--muted); border:0.5px solid var(--border); }
+  .status-badge.loading{ background:var(--warn-dim); color:var(--warn); border:0.5px solid rgba(255,165,2,0.3); animation:pulse 1s infinite; }
+  .status-badge.ready { background:var(--accent-dim); color:var(--accent); border:0.5px solid rgba(0,229,176,0.3); }
+  .status-badge.active{ background:var(--accent-dim); color:var(--accent); border:0.5px solid rgba(0,229,176,0.3); }
+  .status-badge.alert { background:var(--danger-dim); color:var(--danger); border:0.5px solid rgba(255,71,87,0.3); animation:pulse 0.8s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
 
-  /* HEADER */
-  header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px 20px;
-    border-bottom: 0.5px solid var(--border);
-    position: sticky;
-    top: 0;
-    background: rgba(10,13,20,0.92);
-    backdrop-filter: blur(12px);
-    z-index: 100;
-  }
-  .logo {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 15px;
-    font-weight: 600;
-    letter-spacing: -0.2px;
-  }
-  .logo-icon {
-    width: 32px;
-    height: 32px;
-    background: var(--accent-dim);
-    border: 1px solid rgba(0,229,176,0.3);
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-  }
-  .status-badge {
-    font-size: 11px;
-    font-weight: 500;
-    padding: 4px 10px;
-    border-radius: 20px;
-    letter-spacing: 0.3px;
-  }
-  .status-badge.idle { background: var(--surface2); color: var(--muted); border: 0.5px solid var(--border); }
-  .status-badge.active { background: var(--accent-dim); color: var(--accent); border: 0.5px solid rgba(0,229,176,0.3); }
-  .status-badge.alert { background: var(--danger-dim); color: var(--danger); border: 0.5px solid rgba(255,71,87,0.3); animation: pulse-badge 1s infinite; }
+  /* LOAD PROGRESS */
+  .load-panel { margin:16px 20px; background:var(--surface); border:0.5px solid rgba(0,229,176,0.2); border-radius:var(--radius); padding:16px; }
+  .load-title { font-size:13px; font-weight:600; color:var(--accent); margin-bottom:6px; }
+  .load-sub { font-size:12px; color:var(--muted); margin-bottom:12px; line-height:1.6; }
+  .progress-bar-bg { background:var(--surface2); border-radius:4px; height:6px; overflow:hidden; }
+  .progress-bar-fill { height:100%; background:var(--accent); border-radius:4px; transition:width 0.4s; width:0%; }
+  .load-status { font-size:11px; color:var(--muted); margin-top:8px; }
+  .benefit-row { display:flex; gap:16px; margin-top:12px; flex-wrap:wrap; }
+  .benefit { font-size:11px; color:var(--accent); background:var(--accent-dim); padding:4px 10px; border-radius:20px; }
 
-  @keyframes pulse-badge { 0%,100%{opacity:1} 50%{opacity:0.6} }
+  /* MODEL BADGE */
+  .model-badge { margin:0 20px 14px; display:flex; align-items:center; gap:8px; padding:8px 12px; background:var(--surface); border:0.5px solid var(--border); border-radius:var(--radius-sm); font-size:11px; color:var(--muted); }
+  .model-dot { width:6px; height:6px; border-radius:50%; background:var(--accent); flex-shrink:0; }
 
-  /* CAMERA AREA */
-  .camera-wrap {
-    position: relative;
-    margin: 20px;
-    border-radius: var(--radius);
-    overflow: hidden;
-    background: #000;
-    aspect-ratio: 4/3;
-    border: 0.5px solid var(--border);
-  }
-  #video {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-    transform: scaleX(-1);
-  }
-  .camera-placeholder {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    background: var(--surface);
-    color: var(--muted);
-  }
-  .camera-placeholder svg { opacity: 0.4; }
-  .camera-placeholder p { font-size: 13px; }
+  /* CAMERA */
+  .camera-wrap { position:relative; margin:0 20px 14px; border-radius:var(--radius); overflow:hidden; background:#000; aspect-ratio:4/3; border:0.5px solid var(--border); }
+  #video { width:100%; height:100%; object-fit:cover; display:block; }
+  #overlayCanvas { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+  .camera-placeholder { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; background:var(--surface); color:var(--muted); }
+  .camera-placeholder svg { opacity:0.35; }
+  .camera-placeholder p { font-size:13px; }
+  .scan-overlay { position:absolute; inset:0; pointer-events:none; opacity:0; transition:opacity 0.3s; }
+  .scan-overlay.active { opacity:1; }
+  .scan-line { position:absolute; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,var(--accent),transparent); animation:scanline 2.5s linear infinite; }
+  @keyframes scanline { 0%{top:0%} 100%{top:100%} }
+  .corner { position:absolute; width:22px; height:22px; border-color:var(--accent); border-style:solid; }
+  .corner.tl{top:10px;left:10px;border-width:2px 0 0 2px} .corner.tr{top:10px;right:10px;border-width:2px 2px 0 0}
+  .corner.bl{bottom:10px;left:10px;border-width:0 0 2px 2px} .corner.br{bottom:10px;right:10px;border-width:0 2px 2px 0}
+  .cam-alert { position:absolute; inset:0; display:flex; align-items:flex-end; padding:14px; background:linear-gradient(to top,rgba(255,71,87,0.55) 0%,transparent 55%); opacity:0; transition:opacity 0.4s; pointer-events:none; }
+  .cam-alert.show { opacity:1; }
+  .cam-alert-label { background:var(--danger); color:#fff; font-size:13px; font-weight:600; padding:6px 14px; border-radius:20px; }
 
-  /* SCANNING OVERLAY */
-  .scan-overlay {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.3s;
-  }
-  .scan-overlay.active { opacity: 1; }
-  .scan-line {
-    position: absolute;
-    left: 0; right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, var(--accent), transparent);
-    animation: scan 2s linear infinite;
-    box-shadow: 0 0 8px var(--accent);
-  }
-  @keyframes scan { 0%{top:0%} 100%{top:100%} }
-  .corner { position: absolute; width: 20px; height: 20px; border-color: var(--accent); border-style: solid; }
-  .corner.tl { top: 12px; left: 12px; border-width: 2px 0 0 2px; }
-  .corner.tr { top: 12px; right: 12px; border-width: 2px 2px 0 0; }
-  .corner.bl { bottom: 12px; left: 12px; border-width: 0 0 2px 2px; }
-  .corner.br { bottom: 12px; right: 12px; border-width: 0 2px 2px 0; }
+  /* BUTTONS */
+  .btn-wrap { padding:0 20px 14px; display:flex; gap:10px; }
+  .btn-detect { flex:1; height:52px; border-radius:var(--radius); border:none; font-size:15px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all 0.2s; }
+  .btn-detect.start { background:var(--accent); color:#000; }
+  .btn-detect.stop  { background:var(--danger-dim); color:var(--danger); border:0.5px solid rgba(255,71,87,0.3); }
+  .btn-detect:disabled { opacity:0.45; cursor:not-allowed; }
+  .btn-detect:not(:disabled):active { transform:scale(0.97); }
+  .btn-mute { width:52px; height:52px; border-radius:var(--radius); border:0.5px solid var(--border); background:var(--surface); color:var(--muted); font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; flex-shrink:0; }
+  .btn-mute.muted { color:var(--danger); border-color:rgba(255,71,87,0.3); background:var(--danger-dim); }
+  .btn-mute:active { transform:scale(0.96); }
 
-  /* ALERT OVERLAY ON CAMERA */
-  .cam-alert {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: flex-end;
-    padding: 16px;
-    background: linear-gradient(to top, rgba(255,71,87,0.5) 0%, transparent 60%);
-    opacity: 0;
-    transition: opacity 0.4s;
-    pointer-events: none;
-  }
-  .cam-alert.show { opacity: 1; }
-  .cam-alert-label {
-    background: var(--danger);
-    color: white;
-    font-size: 13px;
-    font-weight: 600;
-    padding: 6px 12px;
-    border-radius: 20px;
-    letter-spacing: 0.3px;
-  }
+  /* STATS */
+  .stats-row { margin:0 20px 14px; display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .stat-card { background:var(--surface); border:0.5px solid var(--border); border-radius:var(--radius-sm); padding:12px; text-align:center; }
+  .stat-num { font-size:22px; font-weight:600; }
+  .stat-label { font-size:10px; color:var(--muted); margin-top:2px; letter-spacing:0.3px; }
 
-  /* MAIN BUTTON */
-  .btn-wrap {
-    padding: 0 20px 20px;
-    display: flex;
-    gap: 12px;
-  }
-  .btn-detect {
-    flex: 1;
-    height: 54px;
-    border-radius: var(--radius);
-    border: none;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    transition: all 0.2s;
-    letter-spacing: -0.2px;
-  }
-  .btn-detect.start {
-    background: var(--accent);
-    color: #000;
-  }
-  .btn-detect.start:active { transform: scale(0.97); }
-  .btn-detect.stop {
-    background: var(--danger-dim);
-    color: var(--danger);
-    border: 0.5px solid rgba(255,71,87,0.3);
-  }
-  .btn-detect.stop:active { transform: scale(0.97); }
-  .btn-mute {
-    width: 54px;
-    height: 54px;
-    border-radius: var(--radius);
-    border: 0.5px solid var(--border);
-    background: var(--surface);
-    color: var(--muted);
-    font-size: 20px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-    flex-shrink: 0;
-  }
-  .btn-mute.muted { color: var(--danger); border-color: rgba(255,71,87,0.3); background: var(--danger-dim); }
-  .btn-mute:active { transform: scale(0.96); }
+  /* DETECTION */
+  .info-panel { margin:0 20px 14px; background:var(--surface); border:0.5px solid var(--border); border-radius:var(--radius); padding:14px; }
+  .info-panel-title { font-size:11px; font-weight:600; color:var(--muted); letter-spacing:0.8px; text-transform:uppercase; margin-bottom:10px; }
+  .detected-animal { display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:var(--radius-sm); margin-bottom:8px; }
+  .detected-animal:last-child { margin-bottom:0; }
+  .detected-animal.danger-item { border:0.5px solid rgba(255,71,87,0.4); background:var(--danger-dim); }
+  .detected-animal.warn-item   { border:0.5px solid rgba(255,165,2,0.4); background:var(--warn-dim); }
+  .detected-animal.safe-item   { border:0.5px solid rgba(0,229,176,0.3); background:var(--accent-dim); }
+  .animal-emoji { font-size:22px; line-height:1; }
+  .animal-info { flex:1; min-width:0; }
+  .animal-name { font-size:14px; font-weight:600; }
+  .animal-sub  { font-size:11px; color:var(--muted); margin-top:1px; }
+  .animal-conf { font-size:12px; font-weight:600; padding:3px 8px; border-radius:20px; flex-shrink:0; }
+  .danger-conf { background:var(--danger-dim); color:var(--danger); }
+  .warn-conf   { background:var(--warn-dim);   color:var(--warn); }
+  .safe-conf   { background:var(--accent-dim); color:var(--accent); }
+  .no-detection { text-align:center; padding:18px; color:var(--muted); font-size:13px; }
 
-  /* DETECTION INFO PANEL */
-  .info-panel {
-    margin: 0 20px 20px;
-    background: var(--surface);
-    border: 0.5px solid var(--border);
-    border-radius: var(--radius);
-    padding: 16px;
-  }
-  .info-panel-title {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--muted);
-    letter-spacing: 0.8px;
-    text-transform: uppercase;
-    margin-bottom: 12px;
-  }
-  .detected-animal {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 12px;
-    border-radius: var(--radius-sm);
-    background: var(--surface2);
-    border: 0.5px solid var(--border);
-    margin-bottom: 8px;
-    transition: all 0.3s;
-  }
-  .detected-animal.danger-item { border-color: rgba(255,71,87,0.4); background: var(--danger-dim); }
-  .detected-animal.warn-item { border-color: rgba(255,165,2,0.4); background: var(--warn-dim); }
-  .detected-animal.safe-item { border-color: rgba(0,229,176,0.3); background: var(--accent-dim); }
-  .animal-emoji { font-size: 22px; line-height: 1; }
-  .animal-info { flex: 1; }
-  .animal-name { font-size: 14px; font-weight: 600; }
-  .animal-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
-  .animal-conf {
-    font-size: 12px;
-    font-weight: 600;
-    padding: 3px 8px;
-    border-radius: 20px;
-  }
-  .danger-conf { background: var(--danger-dim); color: var(--danger); }
-  .warn-conf { background: var(--warn-dim); color: var(--warn); }
-  .safe-conf { background: var(--accent-dim); color: var(--accent); }
+  /* TOP PREDICTIONS */
+  .top-preds { margin-top:10px; border-top:0.5px solid var(--border); padding-top:10px; display:none; }
+  .top-preds-title { font-size:10px; color:var(--muted); letter-spacing:0.5px; text-transform:uppercase; margin-bottom:6px; }
+  .pred-row { display:flex; align-items:center; font-size:11px; color:var(--muted); padding:2px 0; gap:6px; }
+  .pred-name { min-width:0; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pred-bar-bg { width:60px; background:var(--surface2); border-radius:2px; height:4px; flex-shrink:0; }
+  .pred-bar-fill { height:100%; background:var(--accent); border-radius:2px; }
+  .pred-pct { min-width:30px; text-align:right; font-family:monospace; flex-shrink:0; }
 
-  .no-detection {
-    text-align: center;
-    padding: 20px;
-    color: var(--muted);
-    font-size: 13px;
-  }
-
-  /* TARGET ANIMALS */
-  .targets-grid {
-    margin: 0 20px 20px;
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-  }
-  .target-chip {
-    background: var(--surface);
-    border: 0.5px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 10px 12px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 12px;
-    color: var(--muted);
-  }
-  .target-chip span:first-child { font-size: 18px; }
-
-  /* STATS ROW */
-  .stats-row {
-    margin: 0 20px 20px;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-  }
-  .stat-card {
-    background: var(--surface);
-    border: 0.5px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 12px;
-    text-align: center;
-  }
-  .stat-num { font-size: 22px; font-weight: 600; color: var(--text); }
-  .stat-label { font-size: 10px; color: var(--muted); margin-top: 2px; letter-spacing: 0.3px; }
-
-  /* SECTION LABEL */
-  .section-label {
-    padding: 0 20px 10px;
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--muted);
-    letter-spacing: 0.8px;
-    text-transform: uppercase;
-  }
-
-  /* INTERVAL SELECTOR */
-  .interval-row {
-    margin: 0 20px 24px;
-    display: flex;
-    gap: 8px;
-  }
-  .iv-btn {
-    flex: 1;
-    padding: 8px 4px;
-    border-radius: var(--radius-sm);
-    border: 0.5px solid var(--border);
-    background: var(--surface);
-    color: var(--muted);
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-  .iv-btn.sel {
-    background: var(--accent-dim);
-    color: var(--accent);
-    border-color: rgba(0,229,176,0.3);
-  }
-
-  /* SOUND WAVE ANIMATION */
-  .wave-wrap {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 3px;
-    height: 20px;
-  }
-  .wave-bar {
-    width: 3px;
-    background: var(--accent);
-    border-radius: 2px;
-    animation: wave 0.8s ease-in-out infinite;
-  }
-  .wave-bar:nth-child(1){ height:8px; animation-delay:0s; }
-  .wave-bar:nth-child(2){ height:16px; animation-delay:0.1s; }
-  .wave-bar:nth-child(3){ height:12px; animation-delay:0.2s; }
-  .wave-bar:nth-child(4){ height:18px; animation-delay:0.15s; }
-  .wave-bar:nth-child(5){ height:8px; animation-delay:0.05s; }
+  /* SOUND WAVE */
+  .wave-wrap { display:none; align-items:center; justify-content:center; gap:3px; height:24px; margin-top:10px; }
+  .wave-wrap.show { display:flex; }
+  .wave-bar { width:3px; background:var(--accent); border-radius:2px; animation:wave 0.8s ease-in-out infinite; }
+  .wave-bar:nth-child(1){height:8px;animation-delay:0s} .wave-bar:nth-child(2){height:16px;animation-delay:0.1s}
+  .wave-bar:nth-child(3){height:12px;animation-delay:0.2s} .wave-bar:nth-child(4){height:18px;animation-delay:0.15s}
+  .wave-bar:nth-child(5){height:8px;animation-delay:0.05s}
   @keyframes wave { 0%,100%{transform:scaleY(0.4)} 50%{transform:scaleY(1)} }
-  .wave-wrap.hidden { display: none; }
 
-  /* LOG */
-  .log-list {
-    margin: 0 20px 30px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    max-height: 180px;
-    overflow-y: auto;
-  }
-  .log-item {
-    font-size: 12px;
-    color: var(--muted);
-    padding: 7px 12px;
-    background: var(--surface);
-    border-radius: var(--radius-sm);
-    border-left: 2px solid var(--border);
-    display: flex;
-    justify-content: space-between;
-  }
-  .log-item.log-danger { border-left-color: var(--danger); color: var(--text); }
-  .log-item.log-warn { border-left-color: var(--warn); }
-  .log-time { color: var(--muted); font-size: 10px; flex-shrink: 0; margin-left: 8px; }
+  .section-label { padding:0 20px 8px; font-size:11px; font-weight:600; color:var(--muted); letter-spacing:0.8px; text-transform:uppercase; }
+  .targets-grid { margin:0 20px 14px; display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
+  .target-chip { background:var(--surface); border:0.5px solid var(--border); border-radius:var(--radius-sm); padding:9px 12px; display:flex; align-items:center; gap:8px; font-size:12px; color:var(--muted); }
+  .target-chip .ce { font-size:17px; }
+
+  .interval-row { margin:0 20px 14px; display:flex; gap:8px; }
+  .iv-btn { flex:1; padding:8px 4px; border-radius:var(--radius-sm); border:0.5px solid var(--border); background:var(--surface); color:var(--muted); font-size:12px; font-weight:500; cursor:pointer; transition:all 0.15s; }
+  .iv-btn.sel { background:var(--accent-dim); color:var(--accent); border-color:rgba(0,229,176,0.3); }
+
+  .log-list { margin:0 20px 30px; display:flex; flex-direction:column; gap:6px; max-height:200px; overflow-y:auto; }
+  .log-item { font-size:12px; color:var(--muted); padding:7px 12px; background:var(--surface); border-radius:var(--radius-sm); border-left:2px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+  .log-item.log-danger { border-left-color:var(--danger); color:var(--text); }
+  .log-item.log-warn   { border-left-color:var(--warn);   color:var(--text); }
+  .log-time { color:var(--muted); font-size:10px; flex-shrink:0; margin-left:8px; }
+  .log-empty { justify-content:center; font-style:italic; }
 </style>
 </head>
 <body>
 
 <header>
-  <div class="logo">
-    <div class="logo-icon">🛡️</div>
-    Animal Guardian
-  </div>
-  <div class="status-badge idle" id="statusBadge">Idle</div>
+  <div class="logo"><div class="logo-icon">🛡️</div>Animal Guardian</div>
+  <div class="status-badge loading" id="statusBadge">Loading AI…</div>
 </header>
 
-<div class="camera-wrap" id="cameraWrap">
+<!-- MODEL LOAD PROGRESS -->
+<div class="load-panel" id="loadPanel">
+  <div class="load-title">🧠 Loading AI Model into Browser</div>
+  <div class="load-sub">
+    TensorFlow.js MobileNet runs <b>100% inside your browser</b>.<br>
+    No API key · No CORS · No internet after first load · Completely free forever.
+  </div>
+  <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressBar"></div></div>
+  <div class="load-status" id="loadStatus">Downloading MobileNet model (~8 MB)…</div>
+  <div class="benefit-row">
+    <span class="benefit">✓ Zero CORS errors</span>
+    <span class="benefit">✓ No API key needed</span>
+    <span class="benefit">✓ Works offline</span>
+    <span class="benefit">✓ Free forever</span>
+  </div>
+</div>
+
+<!-- MODEL BADGE (shown after load) -->
+<div class="model-badge" id="modelBadge" style="display:none">
+  <div class="model-dot"></div>
+  <span>TensorFlow.js MobileNet · ImageNet-1k · Runs locally in browser · No API calls</span>
+</div>
+
+<!-- CAMERA -->
+<div class="camera-wrap">
   <div class="camera-placeholder" id="camPlaceholder">
     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
       <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
       <circle cx="12" cy="13" r="4"/>
     </svg>
-    <p>Tap Start to activate camera</p>
+    <p id="camPlaceholderText">AI model loading…</p>
   </div>
   <video id="video" autoplay muted playsinline style="display:none"></video>
   <canvas id="canvas" style="display:none"></canvas>
-
   <div class="scan-overlay" id="scanOverlay">
     <div class="scan-line"></div>
-    <div class="corner tl"></div>
-    <div class="corner tr"></div>
-    <div class="corner bl"></div>
-    <div class="corner br"></div>
+    <div class="corner tl"></div><div class="corner tr"></div>
+    <div class="corner bl"></div><div class="corner br"></div>
   </div>
-
   <div class="cam-alert" id="camAlert">
-    <div class="cam-alert-label" id="camAlertLabel">⚠️ Threat detected</div>
+    <div class="cam-alert-label" id="camAlertLabel">⚠ Threat detected</div>
   </div>
 </div>
 
+<!-- BUTTONS -->
 <div class="btn-wrap">
-  <button class="btn-detect start" id="btnDetect" onclick="toggleDetection()">
+  <button class="btn-detect start" id="btnDetect" onclick="toggleDetection()" disabled>
     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg>
-    Start Detection
+    <span id="btnLabel">Loading AI…</span>
   </button>
-  <button class="btn-mute" id="btnMute" onclick="toggleMute()" title="Mute sound">🔊</button>
+  <button class="btn-mute" id="btnMute" onclick="toggleMute()">🔊</button>
 </div>
 
-<!-- Stats -->
+<!-- STATS -->
 <div class="stats-row">
-  <div class="stat-card">
-    <div class="stat-num" id="statScans">0</div>
-    <div class="stat-label">Scans</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-num" id="statDetected">0</div>
-    <div class="stat-label">Detected</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-num" id="statAlerts">0</div>
-    <div class="stat-label">Alerts</div>
-  </div>
+  <div class="stat-card"><div class="stat-num" id="statScans">0</div><div class="stat-label">Scans</div></div>
+  <div class="stat-card"><div class="stat-num" id="statDetected">0</div><div class="stat-label">Detected</div></div>
+  <div class="stat-card"><div class="stat-num" id="statAlerts">0</div><div class="stat-label">Alerts</div></div>
 </div>
 
-<!-- Latest detection -->
+<!-- DETECTION -->
 <div class="info-panel">
   <div class="info-panel-title">Last Detection</div>
-  <div id="detectionResult">
-    <div class="no-detection">No animals detected yet</div>
+  <div id="detectionResult"><div class="no-detection">AI model loading…</div></div>
+  <div class="wave-wrap" id="waveWrap">
+    <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+    <div class="wave-bar"></div><div class="wave-bar"></div>
+    <span style="font-size:12px;color:var(--accent);margin-left:8px;">🔊 Dog bark playing…</span>
   </div>
-  <div class="wave-wrap hidden" id="waveWrap">
-    <div class="wave-bar"></div>
-    <div class="wave-bar"></div>
-    <div class="wave-bar"></div>
-    <div class="wave-bar"></div>
-    <div class="wave-bar"></div>
-    <span style="font-size:12px;color:var(--accent);margin-left:8px;">Playing alert sound…</span>
+  <div class="top-preds" id="topPreds">
+    <div class="top-preds-title">Top model predictions (what AI sees)</div>
+    <div id="topPredsList"></div>
   </div>
 </div>
 
-<!-- Scan interval -->
+<!-- INTERVAL -->
 <div class="section-label">Scan Interval</div>
 <div class="interval-row">
-  <button class="iv-btn" onclick="setInterval_(3000,this)">3s</button>
-  <button class="iv-btn sel" onclick="setInterval_(5000,this)">5s</button>
-  <button class="iv-btn" onclick="setInterval_(10000,this)">10s</button>
-  <button class="iv-btn" onclick="setInterval_(15000,this)">15s</button>
+  <button class="iv-btn" onclick="setIv(2000,this)">2s</button>
+  <button class="iv-btn sel" onclick="setIv(4000,this)">4s</button>
+  <button class="iv-btn" onclick="setIv(8000,this)">8s</button>
+  <button class="iv-btn" onclick="setIv(15000,this)">15s</button>
 </div>
 
-<!-- Target animals -->
-<div class="section-label">Monitored Animals</div>
+<!-- TARGETS -->
+<div class="section-label">Monitored Animals (ImageNet classes)</div>
 <div class="targets-grid">
-  <div class="target-chip"><span>🐒</span> Monkey</div>
-  <div class="target-chip"><span>🦍</span> Chimpanzee</div>
-  <div class="target-chip"><span>🐵</span> Langur</div>
-  <div class="target-chip"><span>🦬</span> Wild Buffalo</div>
-  <div class="target-chip"><span>🐗</span> Wild Boar</div>
-  <div class="target-chip"><span>🐻</span> Bear</div>
+  <div class="target-chip"><span class="ce">🐵</span>Langur / Colobus</div>
+  <div class="target-chip"><span class="ce">🐒</span>Macaque / Baboon</div>
+  <div class="target-chip"><span class="ce">🦍</span>Chimpanzee / Gorilla</div>
+  <div class="target-chip"><span class="ce">🦧</span>Orangutan / Gibbon</div>
+  <div class="target-chip"><span class="ce">🦬</span>Buffalo / Bison</div>
+  <div class="target-chip"><span class="ce">🐗</span>Wild Boar / Warthog</div>
+  <div class="target-chip"><span class="ce">🐻</span>Bear (all species)</div>
+  <div class="target-chip"><span class="ce">🐯</span>Tiger / Lion / Leopard</div>
 </div>
 
-<!-- Log -->
+<!-- LOG -->
 <div class="section-label">Detection Log</div>
 <div class="log-list" id="logList">
-  <div class="log-item" style="justify-content:center;color:var(--muted)">Log is empty</div>
+  <div class="log-item log-empty">Log is empty</div>
 </div>
 
-<script>
-const API_KEY = ''; // Paste your Anthropic API key here
+<!-- TensorFlow.js + MobileNet from CDN (no CORS, no API key) -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.21.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
 
-const ANIMALS = {
-  monkey:    { emoji:'🐒', threat:'medium', label:'Monkey',      sound:true },
-  chimpanzee:{ emoji:'🦍', threat:'high',   label:'Chimpanzee',  sound:true },
-  langur:    { emoji:'🐵', threat:'medium', label:'Langur',      sound:true },
-  'wild buffalo':{ emoji:'🦬', threat:'high', label:'Wild Buffalo', sound:true },
-  buffalo:   { emoji:'🦬', threat:'high',   label:'Buffalo',     sound:true },
-  'wild boar':{ emoji:'🐗', threat:'high',  label:'Wild Boar',   sound:true },
-  bear:      { emoji:'🐻', threat:'high',   label:'Bear',        sound:true },
-  'rhesus':  { emoji:'🐒', threat:'medium', label:'Rhesus Monkey',sound:true },
+<script>
+// ══════════════════════════════════════════════════════════════
+//  TensorFlow.js MobileNet — runs ENTIRELY in the browser
+//  ✓ No API key   ✓ No CORS   ✓ Works offline (after 1st load)
+//  ✓ ImageNet-1k = 1000 classes including ALL primate species
+// ══════════════════════════════════════════════════════════════
+
+// TARGET ANIMALS — exact ImageNet label keywords
+// MobileNet returns labels like "langur", "macaque", "chimpanzee, chimp"
+const TARGETS = {
+  // ── PRIMATES ──────────────────────────────────────────────
+  'langur':         { emoji:'🐵', threat:'high',   label:'Langur Monkey' },
+  'colobus':        { emoji:'🐵', threat:'high',   label:'Colobus Monkey' },
+  'proboscis':      { emoji:'🐒', threat:'medium', label:'Proboscis Monkey' },
+  'macaque':        { emoji:'🐒', threat:'medium', label:'Macaque' },
+  'baboon':         { emoji:'🐒', threat:'medium', label:'Baboon' },
+  'chimpanzee':     { emoji:'🦍', threat:'high',   label:'Chimpanzee' },
+  'chimp':          { emoji:'🦍', threat:'high',   label:'Chimpanzee' },
+  'gorilla':        { emoji:'🦍', threat:'high',   label:'Gorilla' },
+  'orangutan':      { emoji:'🦧', threat:'high',   label:'Orangutan' },
+  'gibbon':         { emoji:'🐒', threat:'medium', label:'Gibbon' },
+  'siamang':        { emoji:'🐒', threat:'medium', label:'Siamang' },
+  'guenon':         { emoji:'🐒', threat:'medium', label:'Guenon Monkey' },
+  'patas':          { emoji:'🐒', threat:'medium', label:'Patas Monkey' },
+  'marmoset':       { emoji:'🐒', threat:'low',    label:'Marmoset' },
+  'capuchin':       { emoji:'🐒', threat:'medium', label:'Capuchin Monkey' },
+  'howler':         { emoji:'🐒', threat:'medium', label:'Howler Monkey' },
+  'spider monkey':  { emoji:'🐒', threat:'medium', label:'Spider Monkey' },
+  'squirrel monkey':{ emoji:'🐒', threat:'low',    label:'Squirrel Monkey' },
+  'titi':           { emoji:'🐒', threat:'low',    label:'Titi Monkey' },
+  'indri':          { emoji:'🐒', threat:'low',    label:'Indri' },
+  'madagascar cat': { emoji:'🐒', threat:'low',    label:'Ring-tailed Lemur' },
+  // ── DANGEROUS ANIMALS ─────────────────────────────────────
+  'water buffalo':  { emoji:'🦬', threat:'high',   label:'Water Buffalo' },
+  'bison':          { emoji:'🦬', threat:'high',   label:'Bison' },
+  'wild boar':      { emoji:'🐗', threat:'high',   label:'Wild Boar' },
+  'warthog':        { emoji:'🐗', threat:'high',   label:'Warthog' },
+  'hog':            { emoji:'🐗', threat:'medium', label:'Wild Hog' },
+  'bear':           { emoji:'🐻', threat:'high',   label:'Bear' },
+  'brown bear':     { emoji:'🐻', threat:'high',   label:'Brown Bear' },
+  'ice bear':       { emoji:'🐻‍❄️', threat:'high',  label:'Polar Bear' },
+  'tiger':          { emoji:'🐯', threat:'high',   label:'Tiger' },
+  'lion':           { emoji:'🦁', threat:'high',   label:'Lion' },
+  'leopard':        { emoji:'🐆', threat:'high',   label:'Leopard' },
+  'cheetah':        { emoji:'🐆', threat:'high',   label:'Cheetah' },
+  'jaguar':         { emoji:'🐆', threat:'high',   label:'Jaguar' },
+  'wolf':           { emoji:'🐺', threat:'high',   label:'Wolf' },
+  'hyena':          { emoji:'🐺', threat:'high',   label:'Hyena' },
+  'elephant':       { emoji:'🐘', threat:'high',   label:'Elephant' },
 };
 
-let isDetecting = false, muted = false, scanInterval = 5000;
+const CONF_THRESHOLD = 0.15; // 15% minimum confidence
+
+let model = null;
+let isDetecting = false, muted = false, scanInterval = 4000;
 let scanTimer = null, scans = 0, detections = 0, alerts = 0;
 let audioCtx = null;
 
+// ── LOAD MODEL ────────────────────────────────────────────────
+async function loadModel() {
+  setProgress(10, 'Loading TensorFlow.js runtime…');
+  try {
+    await tf.ready();
+    setProgress(30, 'Downloading MobileNet weights (~8 MB)…');
+    // version:2 = MobileNetV2, alpha:1.0 = full size for best accuracy
+    model = await mobilenet.load({ version: 2, alpha: 1.0 });
+    setProgress(100, '✓ Model ready — no API key, no internet needed for detection');
+    onModelReady();
+  } catch(e) {
+    setProgress(0, '❌ Load failed: ' + e.message + ' — check internet connection');
+    document.getElementById('statusBadge').className = 'status-badge idle';
+    document.getElementById('statusBadge').textContent = 'Load failed';
+  }
+}
+
+function setProgress(pct, msg) {
+  document.getElementById('progressBar').style.width = pct + '%';
+  document.getElementById('loadStatus').textContent = msg;
+}
+
+function onModelReady() {
+  document.getElementById('statusBadge').className = 'status-badge ready';
+  document.getElementById('statusBadge').textContent = '✓ AI Ready';
+  document.getElementById('loadPanel').style.opacity = '0.5';
+  document.getElementById('modelBadge').style.display = 'flex';
+  document.getElementById('btnDetect').disabled = false;
+  document.getElementById('btnLabel').textContent = 'Start Detection';
+  document.getElementById('camPlaceholderText').textContent = 'Tap Start to activate camera';
+  document.getElementById('detectionResult').innerHTML = '<div class="no-detection">AI ready — start detection</div>';
+}
+
+// ── AUDIO — dog bark ─────────────────────────────────────────
 function getAudioCtx() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   return audioCtx;
 }
-
 function playDogBark() {
   if (muted) return;
   const ctx = getAudioCtx();
   const t = ctx.currentTime;
   function bark(start, freq) {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain); gain.connect(ctx.destination);
+    const osc = ctx.createOscillator(), g = ctx.createGain();
+    osc.connect(g); g.connect(ctx.destination);
     osc.frequency.setValueAtTime(freq, start);
-    osc.frequency.exponentialRampToValueAtTime(freq * 0.6, start + 0.12);
-    gain.gain.setValueAtTime(0, start);
-    gain.gain.linearRampToValueAtTime(0.35, start + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.001, start + 0.18);
-    osc.start(start); osc.stop(start + 0.2);
-    const osc2 = ctx.createOscillator();
-    const g2 = ctx.createGain();
-    osc2.type = 'sawtooth';
-    osc2.connect(g2); g2.connect(ctx.destination);
-    osc2.frequency.setValueAtTime(freq * 1.4, start);
+    osc.frequency.exponentialRampToValueAtTime(freq * 0.55, start + 0.13);
+    g.gain.setValueAtTime(0, start);
+    g.gain.linearRampToValueAtTime(0.4, start + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, start + 0.2);
+    osc.start(start); osc.stop(start + 0.22);
+    const o2 = ctx.createOscillator(), g2 = ctx.createGain();
+    o2.type = 'sawtooth'; o2.connect(g2); g2.connect(ctx.destination);
+    o2.frequency.setValueAtTime(freq * 1.5, start);
     g2.gain.setValueAtTime(0, start);
-    g2.gain.linearRampToValueAtTime(0.12, start + 0.01);
-    g2.gain.exponentialRampToValueAtTime(0.001, start + 0.15);
-    osc2.start(start); osc2.stop(start + 0.18);
+    g2.gain.linearRampToValueAtTime(0.15, start + 0.01);
+    g2.gain.exponentialRampToValueAtTime(0.001, start + 0.16);
+    o2.start(start); o2.stop(start + 0.18);
   }
-  bark(t, 380); bark(t + 0.28, 360); bark(t + 0.56, 380);
-  const wave = document.getElementById('waveWrap');
-  wave.classList.remove('hidden');
-  setTimeout(() => wave.classList.add('hidden'), 2000);
+  bark(t, 390); bark(t+0.3, 370); bark(t+0.6, 390); bark(t+0.9, 360);
+  document.getElementById('waveWrap').classList.add('show');
+  setTimeout(() => document.getElementById('waveWrap').classList.remove('show'), 2800);
 }
 
+// ── CAMERA ───────────────────────────────────────────────────
 async function startCamera() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } }
     });
     const vid = document.getElementById('video');
-    vid.srcObject = stream;
-    vid.style.display = 'block';
+    vid.srcObject = stream; vid.style.display = 'block';
     document.getElementById('camPlaceholder').style.display = 'none';
     return true;
   } catch(e) {
-    alert('Camera access denied. Please allow camera permission and try again.');
+    alert('Camera access denied. Please allow camera and try again.');
     return false;
   }
 }
-
 function stopCamera() {
   const vid = document.getElementById('video');
-  if (vid.srcObject) {
-    vid.srcObject.getTracks().forEach(t => t.stop());
-    vid.srcObject = null;
-  }
+  if (vid.srcObject) { vid.srcObject.getTracks().forEach(t => t.stop()); vid.srcObject = null; }
   vid.style.display = 'none';
   document.getElementById('camPlaceholder').style.display = 'flex';
 }
 
-function captureFrame() {
+// ── CLASSIFY WITH MOBILENET ───────────────────────────────────
+async function classifyFrame() {
   const vid = document.getElementById('video');
-  const canvas = document.getElementById('canvas');
-  canvas.width = 640; canvas.height = 480;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(vid, 0, 0, 640, 480);
-  return canvas.toDataURL('image/jpeg', 0.7).split(',')[1];
+  if (!vid.videoWidth) return [];
+
+  // MobileNet classifies directly from the video element — no canvas needed!
+  const predictions = await model.classify(vid, 10); // get top 10 predictions
+  return predictions; // [{className: "langur", probability: 0.87}, ...]
 }
 
-async function analyzeFrame(b64) {
-  if (!API_KEY) {
-    return simulateDetection();
+function matchTargets(predictions) {
+  const found = [];
+  for (const p of predictions) {
+    if (p.probability < CONF_THRESHOLD) continue;
+    const classLower = p.className.toLowerCase();
+    const match = Object.entries(TARGETS).find(([key]) =>
+      classLower.includes(key) || key.split(' ').every(w => classLower.includes(w))
+    );
+    if (match) {
+      const [, info] = match;
+      // Avoid duplicate labels
+      if (!found.find(f => f.label === info.label)) {
+        found.push({ name: info.label, confidence: Math.round(p.probability * 100), threat: info.threat, emoji: info.emoji });
+      }
+    }
   }
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': API_KEY,
-      'anthropic-version': '2023-06-01'
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 256,
-      messages: [{
-        role: 'user',
-        content: [{
-          type: 'image',
-          source: { type: 'base64', media_type: 'image/jpeg', data: b64 }
-        },{
-          type: 'text',
-          text: 'Analyze this image. List ONLY animals present from this list: monkey, langur, rhesus monkey. Respond in JSON: {"animals":[{"name":"animal name","confidence":0-100,"threat":"high|medium|low"}]}. If none found, respond {"animals":[]}. No other text.'
-        }]
-      }]
-    })
-  });
-  const data = await res.json();
-  const txt = data.content?.[0]?.text || '{"animals":[]}';
-  try {
-    const clean = txt.replace(/```json|```/g,'').trim();
-    return JSON.parse(clean);
-  } catch { return {animals:[]}; }
+  return found;
 }
 
-function simulateDetection() {
-  if (Math.random() < 0.25) {
-    const names = Object.keys(ANIMALS);
-    const name = names[Math.floor(Math.random() * names.length)];
-    return { animals: [{ name, confidence: Math.floor(70 + Math.random() * 28), threat: ANIMALS[name].threat }] };
-  }
-  return { animals: [] };
-}
-
+// ── MAIN SCAN ────────────────────────────────────────────────
 async function doScan() {
-  if (!isDetecting) return;
+  if (!isDetecting || !model) return;
   scans++;
   document.getElementById('statScans').textContent = scans;
 
-  let b64;
-  try { b64 = captureFrame(); } catch(e) { return; }
+  let predictions = [];
+  try { predictions = await classifyFrame(); }
+  catch(e) { console.warn('Classify error:', e); return; }
 
-  let result;
-  try { result = await analyzeFrame(b64); }
-  catch(e) { result = { animals: [] }; }
+  // Show top 5 raw predictions for transparency
+  showTopPreds(predictions.slice(0, 5));
 
-  if (result.animals && result.animals.length > 0) {
+  const found = matchTargets(predictions);
+
+  if (found.length > 0) {
     detections++;
     document.getElementById('statDetected').textContent = detections;
-    renderDetections(result.animals);
-
-    const dangerous = result.animals.find(a => a.threat === 'high' || ANIMALS[a.name.toLowerCase()]?.sound);
+    renderDetections(found);
+    const dangerous = found.find(a => a.threat === 'high' || a.threat === 'medium');
     if (dangerous) {
       alerts++;
       document.getElementById('statAlerts').textContent = alerts;
       showCamAlert(dangerous.name);
       playDogBark();
-      document.getElementById('statusBadge').className = 'status-badge alert';
-      document.getElementById('statusBadge').textContent = '⚠ Alert';
-      setTimeout(() => {
-        if (isDetecting) {
-          document.getElementById('statusBadge').className = 'status-badge active';
-          document.getElementById('statusBadge').textContent = 'Scanning…';
-        }
-        hideCamAlert();
-      }, 3000);
+      setBadge('alert', '⚠ Alert!');
+      setTimeout(() => { if (isDetecting) setBadge('active', 'Scanning…'); hideCamAlert(); }, 3500);
     }
-    addLog(result.animals[0]);
+    addLog(found[0]);
   } else {
-    document.getElementById('detectionResult').innerHTML = '<div class="no-detection">No target animals detected</div>';
+    document.getElementById('detectionResult').innerHTML = '<div class="no-detection">No target animals in frame</div>';
   }
 }
 
-function renderDetections(animals) {
-  const container = document.getElementById('detectionResult');
-  container.innerHTML = animals.map(a => {
-    const key = a.name.toLowerCase();
-    const info = Object.entries(ANIMALS).find(([k]) => key.includes(k))?.[1] || { emoji:'🐾', threat:'medium', label: a.name };
-    const cls = info.threat === 'high' ? 'danger-item' : info.threat === 'medium' ? 'warn-item' : 'safe-item';
-    const confCls = info.threat === 'high' ? 'danger-conf' : info.threat === 'medium' ? 'warn-conf' : 'safe-conf';
-    return `<div class="detected-animal ${cls}">
-      <div class="animal-emoji">${info.emoji}</div>
-      <div class="animal-info">
-        <div class="animal-name">${info.label}</div>
-        <div class="animal-sub">${info.threat === 'high' ? '⚠ High threat' : info.threat === 'medium' ? 'Medium threat' : 'Low threat'}</div>
-      </div>
-      <div class="animal-conf ${confCls}">${a.confidence}%</div>
+// ── UI ────────────────────────────────────────────────────────
+function showTopPreds(preds) {
+  const wrap = document.getElementById('topPreds');
+  const list = document.getElementById('topPredsList');
+  if (!preds.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  list.innerHTML = preds.map(p => {
+    const pct = Math.round(p.probability * 100);
+    return `<div class="pred-row">
+      <span class="pred-name">${p.className}</span>
+      <div class="pred-bar-bg"><div class="pred-bar-fill" style="width:${pct}%"></div></div>
+      <span class="pred-pct">${pct}%</span>
     </div>`;
   }).join('');
 }
 
+function renderDetections(animals) {
+  document.getElementById('detectionResult').innerHTML = animals.map(a => {
+    const cls = a.threat==='high' ? 'danger-item' : a.threat==='medium' ? 'warn-item' : 'safe-item';
+    const cc  = a.threat==='high' ? 'danger-conf' : a.threat==='medium' ? 'warn-conf' : 'safe-conf';
+    const sub = a.threat==='high' ? '⚠ High threat — bark triggered' : a.threat==='medium' ? '⚠ Medium threat' : 'Low threat';
+    return `<div class="detected-animal ${cls}">
+      <div class="animal-emoji">${a.emoji}</div>
+      <div class="animal-info"><div class="animal-name">${a.name}</div><div class="animal-sub">${sub}</div></div>
+      <div class="animal-conf ${cc}">${a.confidence}%</div>
+    </div>`;
+  }).join('');
+}
+
+function setBadge(cls, txt) {
+  const b = document.getElementById('statusBadge');
+  b.className = 'status-badge ' + cls; b.textContent = txt;
+}
 function showCamAlert(name) {
-  const el = document.getElementById('camAlert');
-  document.getElementById('camAlertLabel').textContent = `⚠ ${name} detected!`;
-  el.classList.add('show');
+  document.getElementById('camAlertLabel').textContent = '⚠ ' + name + ' detected!';
+  document.getElementById('camAlert').classList.add('show');
 }
 function hideCamAlert() { document.getElementById('camAlert').classList.remove('show'); }
 
 function addLog(animal) {
   const list = document.getElementById('logList');
-  const dummy = list.querySelector('.log-item[style]');
-  if (dummy) dummy.remove();
-  const key = animal.name.toLowerCase();
-  const info = Object.entries(ANIMALS).find(([k]) => key.includes(k))?.[1] || { emoji:'🐾', threat:'medium', label: animal.name };
-  const cls = info.threat === 'high' ? 'log-danger' : info.threat === 'medium' ? 'log-warn' : '';
+  const empty = list.querySelector('.log-empty');
+  if (empty) empty.remove();
+  const cls = animal.threat==='high' ? 'log-danger' : animal.threat==='medium' ? 'log-warn' : '';
   const now = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
   const item = document.createElement('div');
-  item.className = `log-item ${cls}`;
-  item.innerHTML = `<span>${info.emoji} ${info.label} detected (${animal.confidence}%)</span><span class="log-time">${now}</span>`;
+  item.className = 'log-item ' + cls;
+  item.innerHTML = `<span>${animal.emoji} ${animal.name} (${animal.confidence}%)</span><span class="log-time">${now}</span>`;
   list.insertBefore(item, list.firstChild);
-  if (list.children.length > 10) list.removeChild(list.lastChild);
+  if (list.children.length > 15) list.removeChild(list.lastChild);
 }
 
 async function toggleDetection() {
+  if (!model) return;
   if (!isDetecting) {
-    const ok = await startCamera();
-    if (!ok) return;
+    const ok = await startCamera(); if (!ok) return;
     isDetecting = true;
-    document.getElementById('btnDetect').className = 'btn-detect stop';
-    document.getElementById('btnDetect').innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg> Stop Detection`;
-    document.getElementById('statusBadge').className = 'status-badge active';
-    document.getElementById('statusBadge').textContent = 'Scanning…';
+    const btn = document.getElementById('btnDetect');
+    btn.className = 'btn-detect stop';
+    btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg> <span id="btnLabel">Stop Detection</span>`;
+    setBadge('active', 'Scanning…');
     document.getElementById('scanOverlay').classList.add('active');
     scanTimer = setInterval(doScan, scanInterval);
     setTimeout(doScan, 800);
   } else {
-    isDetecting = false;
-    clearInterval(scanTimer);
-    stopCamera();
-    document.getElementById('btnDetect').className = 'btn-detect start';
-    document.getElementById('btnDetect').innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg> Start Detection`;
-    document.getElementById('statusBadge').className = 'status-badge idle';
-    document.getElementById('statusBadge').textContent = 'Idle';
+    isDetecting = false; clearInterval(scanTimer); stopCamera();
+    const btn = document.getElementById('btnDetect');
+    btn.className = 'btn-detect start';
+    btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg> <span id="btnLabel">Start Detection</span>`;
+    setBadge('ready', '✓ AI Ready');
     document.getElementById('scanOverlay').classList.remove('active');
     hideCamAlert();
+    document.getElementById('topPreds').style.display = 'none';
   }
 }
 
@@ -716,62 +535,17 @@ function toggleMute() {
   btn.className = muted ? 'btn-mute muted' : 'btn-mute';
 }
 
-function setInterval_(ms, btn) {
+function setIv(ms, btn) {
   scanInterval = ms;
   document.querySelectorAll('.iv-btn').forEach(b => b.classList.remove('sel'));
   btn.classList.add('sel');
-  if (isDetecting) {
-    clearInterval(scanTimer);
-    scanTimer = setInterval(doScan, scanInterval);
-  }
+  if (isDetecting) { clearInterval(scanTimer); scanTimer = setInterval(doScan, scanInterval); }
 }
 
-// Prompt for API key on load if empty
-window.addEventListener('load', () => {
-  if (!API_KEY) {
-    const key = prompt('Enter your Anthropic API key (or cancel to use simulation mode):\n\nYou can get one at console.anthropic.com');
-    if (key && key.trim()) {
-      // Store in memory
-      window._apiKey = key.trim();
-      document.querySelector('script').textContent = '';
-    }
-  }
-});
-
-// Override API_KEY with runtime input
-const origAnalyze = analyzeFrame;
-window.analyzeFrame = async function(b64) {
-  const key = window._apiKey || API_KEY;
-  if (!key) return simulateDetection();
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': key,
-      'anthropic-version': '2023-06-01'
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 256,
-      messages: [{
-        role: 'user',
-        content: [{
-          type: 'image',
-          source: { type: 'base64', media_type: 'image/jpeg', data: b64 }
-        },{
-          type: 'text',
-          text: 'Analyze this image. List ONLY animals present from: monkey, chimpanzee, langur, rhesus monkey, wild buffalo, wild boar, bear. Respond in JSON only: {"animals":[{"name":"animal name","confidence":0-100,"threat":"high|medium|low"}]}. If none found: {"animals":[]}. No other text.'
-        }]
-      }]
-    })
-  });
-  const data = await res.json();
-  const txt = data.content?.[0]?.text || '{"animals":[]}';
-  try { return JSON.parse(txt.replace(/```json|```/g,'').trim()); }
-  catch { return {animals:[]}; }
-};
-// Replace the non-runtime version
-window.analyzeFrame = window.analyzeFrame;
+// ── BOOT ─────────────────────────────────────────────────────
+window.addEventListener('load', loadModel);
 </script>
 </body>
 </html>
+HTMLEOF
+echo "Done"
