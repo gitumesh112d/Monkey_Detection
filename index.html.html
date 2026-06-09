@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Animal Guardian</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0d14;
+    --surface: #131720;
+    --surface2: #1a2030;
+    --border: rgba(255,255,255,0.08);
+    --border-bright: rgba(255,255,255,0.15);
+    --text: #f0f2f7;
+    --muted: #7a8499;
+    --accent: #00e5b0;
+    --accent-dim: rgba(0,229,176,0.12);
+    --danger: #ff4757;
+    --danger-dim: rgba(255,71,87,0.12);
+    --warn: #ffa502;
+    --warn-dim: rgba(255,165,2,0.12);
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* HEADER */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 0.5px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: rgba(10,13,20,0.92);
+    backdrop-filter: blur(12px);
+    z-index: 100;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.2px;
+  }
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+    background: var(--accent-dim);
+    border: 1px solid rgba(0,229,176,0.3);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+  .status-badge {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.3px;
+  }
+  .status-badge.idle { background: var(--surface2); color: var(--muted); border: 0.5px solid var(--border); }
+  .status-badge.active { background: var(--accent-dim); color: var(--accent); border: 0.5px solid rgba(0,229,176,0.3); }
+  .status-badge.alert { background: var(--danger-dim); color: var(--danger); border: 0.5px solid rgba(255,71,87,0.3); animation: pulse-badge 1s infinite; }
+
+  @keyframes pulse-badge { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
+  /* CAMERA AREA */
+  .camera-wrap {
+    position: relative;
+    margin: 20px;
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: #000;
+    aspect-ratio: 4/3;
+    border: 0.5px solid var(--border);
+  }
+  #video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transform: scaleX(-1);
+  }
+  .camera-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: var(--surface);
+    color: var(--muted);
+  }
+  .camera-placeholder svg { opacity: 0.4; }
+  .camera-placeholder p { font-size: 13px; }
+
+  /* SCANNING OVERLAY */
+  .scan-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .scan-overlay.active { opacity: 1; }
+  .scan-line {
+    position: absolute;
+    left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    animation: scan 2s linear infinite;
+    box-shadow: 0 0 8px var(--accent);
+  }
+  @keyframes scan { 0%{top:0%} 100%{top:100%} }
+  .corner { position: absolute; width: 20px; height: 20px; border-color: var(--accent); border-style: solid; }
+  .corner.tl { top: 12px; left: 12px; border-width: 2px 0 0 2px; }
+  .corner.tr { top: 12px; right: 12px; border-width: 2px 2px 0 0; }
+  .corner.bl { bottom: 12px; left: 12px; border-width: 0 0 2px 2px; }
+  .corner.br { bottom: 12px; right: 12px; border-width: 0 2px 2px 0; }
+
+  /* ALERT OVERLAY ON CAMERA */
+  .cam-alert {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: flex-end;
+    padding: 16px;
+    background: linear-gradient(to top, rgba(255,71,87,0.5) 0%, transparent 60%);
+    opacity: 0;
+    transition: opacity 0.4s;
+    pointer-events: none;
+  }
+  .cam-alert.show { opacity: 1; }
+  .cam-alert-label {
+    background: var(--danger);
+    color: white;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 20px;
+    letter-spacing: 0.3px;
+  }
+
+  /* MAIN BUTTON */
+  .btn-wrap {
+    padding: 0 20px 20px;
+    display: flex;
+    gap: 12px;
+  }
+  .btn-detect {
+    flex: 1;
+    height: 54px;
+    border-radius: var(--radius);
+    border: none;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s;
+    letter-spacing: -0.2px;
+  }
+  .btn-detect.start {
+    background: var(--accent);
+    color: #000;
+  }
+  .btn-detect.start:active { transform: scale(0.97); }
+  .btn-detect.stop {
+    background: var(--danger-dim);
+    color: var(--danger);
+    border: 0.5px solid rgba(255,71,87,0.3);
+  }
+  .btn-detect.stop:active { transform: scale(0.97); }
+  .btn-mute {
+    width: 54px;
+    height: 54px;
+    border-radius: var(--radius);
+    border: 0.5px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .btn-mute.muted { color: var(--danger); border-color: rgba(255,71,87,0.3); background: var(--danger-dim); }
+  .btn-mute:active { transform: scale(0.96); }
+
+  /* DETECTION INFO PANEL */
+  .info-panel {
+    margin: 0 20px 20px;
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+  .info-panel-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .detected-animal {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    background: var(--surface2);
+    border: 0.5px solid var(--border);
+    margin-bottom: 8px;
+    transition: all 0.3s;
+  }
+  .detected-animal.danger-item { border-color: rgba(255,71,87,0.4); background: var(--danger-dim); }
+  .detected-animal.warn-item { border-color: rgba(255,165,2,0.4); background: var(--warn-dim); }
+  .detected-animal.safe-item { border-color: rgba(0,229,176,0.3); background: var(--accent-dim); }
+  .animal-emoji { font-size: 22px; line-height: 1; }
+  .animal-info { flex: 1; }
+  .animal-name { font-size: 14px; font-weight: 600; }
+  .animal-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .animal-conf {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 20px;
+  }
+  .danger-conf { background: var(--danger-dim); color: var(--danger); }
+  .warn-conf { background: var(--warn-dim); color: var(--warn); }
+  .safe-conf { background: var(--accent-dim); color: var(--accent); }
+
+  .no-detection {
+    text-align: center;
+    padding: 20px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  /* TARGET ANIMALS */
+  .targets-grid {
+    margin: 0 20px 20px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .target-chip {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .target-chip span:first-child { font-size: 18px; }
+
+  /* STATS ROW */
+  .stats-row {
+    margin: 0 20px 20px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    text-align: center;
+  }
+  .stat-num { font-size: 22px; font-weight: 600; color: var(--text); }
+  .stat-label { font-size: 10px; color: var(--muted); margin-top: 2px; letter-spacing: 0.3px; }
+
+  /* SECTION LABEL */
+  .section-label {
+    padding: 0 20px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+  }
+
+  /* INTERVAL SELECTOR */
+  .interval-row {
+    margin: 0 20px 24px;
+    display: flex;
+    gap: 8px;
+  }
+  .iv-btn {
+    flex: 1;
+    padding: 8px 4px;
+    border-radius: var(--radius-sm);
+    border: 0.5px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .iv-btn.sel {
+    background: var(--accent-dim);
+    color: var(--accent);
+    border-color: rgba(0,229,176,0.3);
+  }
+
+  /* SOUND WAVE ANIMATION */
+  .wave-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    height: 20px;
+  }
+  .wave-bar {
+    width: 3px;
+    background: var(--accent);
+    border-radius: 2px;
+    animation: wave 0.8s ease-in-out infinite;
+  }
+  .wave-bar:nth-child(1){ height:8px; animation-delay:0s; }
+  .wave-bar:nth-child(2){ height:16px; animation-delay:0.1s; }
+  .wave-bar:nth-child(3){ height:12px; animation-delay:0.2s; }
+  .wave-bar:nth-child(4){ height:18px; animation-delay:0.15s; }
+  .wave-bar:nth-child(5){ height:8px; animation-delay:0.05s; }
+  @keyframes wave { 0%,100%{transform:scaleY(0.4)} 50%{transform:scaleY(1)} }
+  .wave-wrap.hidden { display: none; }
+
+  /* LOG */
+  .log-list {
+    margin: 0 20px 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+  .log-item {
+    font-size: 12px;
+    color: var(--muted);
+    padding: 7px 12px;
+    background: var(--surface);
+    border-radius: var(--radius-sm);
+    border-left: 2px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+  }
+  .log-item.log-danger { border-left-color: var(--danger); color: var(--text); }
+  .log-item.log-warn { border-left-color: var(--warn); }
+  .log-time { color: var(--muted); font-size: 10px; flex-shrink: 0; margin-left: 8px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🛡️</div>
+    Animal Guardian
+  </div>
+  <div class="status-badge idle" id="statusBadge">Idle</div>
+</header>
+
+<div class="camera-wrap" id="cameraWrap">
+  <div class="camera-placeholder" id="camPlaceholder">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+      <circle cx="12" cy="13" r="4"/>
+    </svg>
+    <p>Tap Start to activate camera</p>
+  </div>
+  <video id="video" autoplay muted playsinline style="display:none"></video>
+  <canvas id="canvas" style="display:none"></canvas>
+
+  <div class="scan-overlay" id="scanOverlay">
+    <div class="scan-line"></div>
+    <div class="corner tl"></div>
+    <div class="corner tr"></div>
+    <div class="corner bl"></div>
+    <div class="corner br"></div>
+  </div>
+
+  <div class="cam-alert" id="camAlert">
+    <div class="cam-alert-label" id="camAlertLabel">⚠️ Threat detected</div>
+  </div>
+</div>
+
+<div class="btn-wrap">
+  <button class="btn-detect start" id="btnDetect" onclick="toggleDetection()">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg>
+    Start Detection
+  </button>
+  <button class="btn-mute" id="btnMute" onclick="toggleMute()" title="Mute sound">🔊</button>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-num" id="statScans">0</div>
+    <div class="stat-label">Scans</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-num" id="statDetected">0</div>
+    <div class="stat-label">Detected</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-num" id="statAlerts">0</div>
+    <div class="stat-label">Alerts</div>
+  </div>
+</div>
+
+<!-- Latest detection -->
+<div class="info-panel">
+  <div class="info-panel-title">Last Detection</div>
+  <div id="detectionResult">
+    <div class="no-detection">No animals detected yet</div>
+  </div>
+  <div class="wave-wrap hidden" id="waveWrap">
+    <div class="wave-bar"></div>
+    <div class="wave-bar"></div>
+    <div class="wave-bar"></div>
+    <div class="wave-bar"></div>
+    <div class="wave-bar"></div>
+    <span style="font-size:12px;color:var(--accent);margin-left:8px;">Playing alert sound…</span>
+  </div>
+</div>
+
+<!-- Scan interval -->
+<div class="section-label">Scan Interval</div>
+<div class="interval-row">
+  <button class="iv-btn" onclick="setInterval_(3000,this)">3s</button>
+  <button class="iv-btn sel" onclick="setInterval_(5000,this)">5s</button>
+  <button class="iv-btn" onclick="setInterval_(10000,this)">10s</button>
+  <button class="iv-btn" onclick="setInterval_(15000,this)">15s</button>
+</div>
+
+<!-- Target animals -->
+<div class="section-label">Monitored Animals</div>
+<div class="targets-grid">
+  <div class="target-chip"><span>🐒</span> Monkey</div>
+  <div class="target-chip"><span>🦍</span> Chimpanzee</div>
+  <div class="target-chip"><span>🐵</span> Langur</div>
+  <div class="target-chip"><span>🦬</span> Wild Buffalo</div>
+  <div class="target-chip"><span>🐗</span> Wild Boar</div>
+  <div class="target-chip"><span>🐻</span> Bear</div>
+</div>
+
+<!-- Log -->
+<div class="section-label">Detection Log</div>
+<div class="log-list" id="logList">
+  <div class="log-item" style="justify-content:center;color:var(--muted)">Log is empty</div>
+</div>
+
+<script>
+const API_KEY = ''; // Paste your Anthropic API key here
+
+const ANIMALS = {
+  monkey:    { emoji:'🐒', threat:'medium', label:'Monkey',      sound:true },
+  chimpanzee:{ emoji:'🦍', threat:'high',   label:'Chimpanzee',  sound:true },
+  langur:    { emoji:'🐵', threat:'medium', label:'Langur',      sound:true },
+  'wild buffalo':{ emoji:'🦬', threat:'high', label:'Wild Buffalo', sound:true },
+  buffalo:   { emoji:'🦬', threat:'high',   label:'Buffalo',     sound:true },
+  'wild boar':{ emoji:'🐗', threat:'high',  label:'Wild Boar',   sound:true },
+  bear:      { emoji:'🐻', threat:'high',   label:'Bear',        sound:true },
+  'rhesus':  { emoji:'🐒', threat:'medium', label:'Rhesus Monkey',sound:true },
+};
+
+let isDetecting = false, muted = false, scanInterval = 5000;
+let scanTimer = null, scans = 0, detections = 0, alerts = 0;
+let audioCtx = null;
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playDogBark() {
+  if (muted) return;
+  const ctx = getAudioCtx();
+  const t = ctx.currentTime;
+  function bark(start, freq) {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.frequency.setValueAtTime(freq, start);
+    osc.frequency.exponentialRampToValueAtTime(freq * 0.6, start + 0.12);
+    gain.gain.setValueAtTime(0, start);
+    gain.gain.linearRampToValueAtTime(0.35, start + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, start + 0.18);
+    osc.start(start); osc.stop(start + 0.2);
+    const osc2 = ctx.createOscillator();
+    const g2 = ctx.createGain();
+    osc2.type = 'sawtooth';
+    osc2.connect(g2); g2.connect(ctx.destination);
+    osc2.frequency.setValueAtTime(freq * 1.4, start);
+    g2.gain.setValueAtTime(0, start);
+    g2.gain.linearRampToValueAtTime(0.12, start + 0.01);
+    g2.gain.exponentialRampToValueAtTime(0.001, start + 0.15);
+    osc2.start(start); osc2.stop(start + 0.18);
+  }
+  bark(t, 380); bark(t + 0.28, 360); bark(t + 0.56, 380);
+  const wave = document.getElementById('waveWrap');
+  wave.classList.remove('hidden');
+  setTimeout(() => wave.classList.add('hidden'), 2000);
+}
+
+async function startCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } }
+    });
+    const vid = document.getElementById('video');
+    vid.srcObject = stream;
+    vid.style.display = 'block';
+    document.getElementById('camPlaceholder').style.display = 'none';
+    return true;
+  } catch(e) {
+    alert('Camera access denied. Please allow camera permission and try again.');
+    return false;
+  }
+}
+
+function stopCamera() {
+  const vid = document.getElementById('video');
+  if (vid.srcObject) {
+    vid.srcObject.getTracks().forEach(t => t.stop());
+    vid.srcObject = null;
+  }
+  vid.style.display = 'none';
+  document.getElementById('camPlaceholder').style.display = 'flex';
+}
+
+function captureFrame() {
+  const vid = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  canvas.width = 640; canvas.height = 480;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(vid, 0, 0, 640, 480);
+  return canvas.toDataURL('image/jpeg', 0.7).split(',')[1];
+}
+
+async function analyzeFrame(b64) {
+  if (!API_KEY) {
+    return simulateDetection();
+  }
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': API_KEY,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 256,
+      messages: [{
+        role: 'user',
+        content: [{
+          type: 'image',
+          source: { type: 'base64', media_type: 'image/jpeg', data: b64 }
+        },{
+          type: 'text',
+          text: 'Analyze this image. List ONLY animals present from this list: monkey, langur, rhesus monkey. Respond in JSON: {"animals":[{"name":"animal name","confidence":0-100,"threat":"high|medium|low"}]}. If none found, respond {"animals":[]}. No other text.'
+        }]
+      }]
+    })
+  });
+  const data = await res.json();
+  const txt = data.content?.[0]?.text || '{"animals":[]}';
+  try {
+    const clean = txt.replace(/```json|```/g,'').trim();
+    return JSON.parse(clean);
+  } catch { return {animals:[]}; }
+}
+
+function simulateDetection() {
+  if (Math.random() < 0.25) {
+    const names = Object.keys(ANIMALS);
+    const name = names[Math.floor(Math.random() * names.length)];
+    return { animals: [{ name, confidence: Math.floor(70 + Math.random() * 28), threat: ANIMALS[name].threat }] };
+  }
+  return { animals: [] };
+}
+
+async function doScan() {
+  if (!isDetecting) return;
+  scans++;
+  document.getElementById('statScans').textContent = scans;
+
+  let b64;
+  try { b64 = captureFrame(); } catch(e) { return; }
+
+  let result;
+  try { result = await analyzeFrame(b64); }
+  catch(e) { result = { animals: [] }; }
+
+  if (result.animals && result.animals.length > 0) {
+    detections++;
+    document.getElementById('statDetected').textContent = detections;
+    renderDetections(result.animals);
+
+    const dangerous = result.animals.find(a => a.threat === 'high' || ANIMALS[a.name.toLowerCase()]?.sound);
+    if (dangerous) {
+      alerts++;
+      document.getElementById('statAlerts').textContent = alerts;
+      showCamAlert(dangerous.name);
+      playDogBark();
+      document.getElementById('statusBadge').className = 'status-badge alert';
+      document.getElementById('statusBadge').textContent = '⚠ Alert';
+      setTimeout(() => {
+        if (isDetecting) {
+          document.getElementById('statusBadge').className = 'status-badge active';
+          document.getElementById('statusBadge').textContent = 'Scanning…';
+        }
+        hideCamAlert();
+      }, 3000);
+    }
+    addLog(result.animals[0]);
+  } else {
+    document.getElementById('detectionResult').innerHTML = '<div class="no-detection">No target animals detected</div>';
+  }
+}
+
+function renderDetections(animals) {
+  const container = document.getElementById('detectionResult');
+  container.innerHTML = animals.map(a => {
+    const key = a.name.toLowerCase();
+    const info = Object.entries(ANIMALS).find(([k]) => key.includes(k))?.[1] || { emoji:'🐾', threat:'medium', label: a.name };
+    const cls = info.threat === 'high' ? 'danger-item' : info.threat === 'medium' ? 'warn-item' : 'safe-item';
+    const confCls = info.threat === 'high' ? 'danger-conf' : info.threat === 'medium' ? 'warn-conf' : 'safe-conf';
+    return `<div class="detected-animal ${cls}">
+      <div class="animal-emoji">${info.emoji}</div>
+      <div class="animal-info">
+        <div class="animal-name">${info.label}</div>
+        <div class="animal-sub">${info.threat === 'high' ? '⚠ High threat' : info.threat === 'medium' ? 'Medium threat' : 'Low threat'}</div>
+      </div>
+      <div class="animal-conf ${confCls}">${a.confidence}%</div>
+    </div>`;
+  }).join('');
+}
+
+function showCamAlert(name) {
+  const el = document.getElementById('camAlert');
+  document.getElementById('camAlertLabel').textContent = `⚠ ${name} detected!`;
+  el.classList.add('show');
+}
+function hideCamAlert() { document.getElementById('camAlert').classList.remove('show'); }
+
+function addLog(animal) {
+  const list = document.getElementById('logList');
+  const dummy = list.querySelector('.log-item[style]');
+  if (dummy) dummy.remove();
+  const key = animal.name.toLowerCase();
+  const info = Object.entries(ANIMALS).find(([k]) => key.includes(k))?.[1] || { emoji:'🐾', threat:'medium', label: animal.name };
+  const cls = info.threat === 'high' ? 'log-danger' : info.threat === 'medium' ? 'log-warn' : '';
+  const now = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const item = document.createElement('div');
+  item.className = `log-item ${cls}`;
+  item.innerHTML = `<span>${info.emoji} ${info.label} detected (${animal.confidence}%)</span><span class="log-time">${now}</span>`;
+  list.insertBefore(item, list.firstChild);
+  if (list.children.length > 10) list.removeChild(list.lastChild);
+}
+
+async function toggleDetection() {
+  if (!isDetecting) {
+    const ok = await startCamera();
+    if (!ok) return;
+    isDetecting = true;
+    document.getElementById('btnDetect').className = 'btn-detect stop';
+    document.getElementById('btnDetect').innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg> Stop Detection`;
+    document.getElementById('statusBadge').className = 'status-badge active';
+    document.getElementById('statusBadge').textContent = 'Scanning…';
+    document.getElementById('scanOverlay').classList.add('active');
+    scanTimer = setInterval(doScan, scanInterval);
+    setTimeout(doScan, 800);
+  } else {
+    isDetecting = false;
+    clearInterval(scanTimer);
+    stopCamera();
+    document.getElementById('btnDetect').className = 'btn-detect start';
+    document.getElementById('btnDetect').innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg> Start Detection`;
+    document.getElementById('statusBadge').className = 'status-badge idle';
+    document.getElementById('statusBadge').textContent = 'Idle';
+    document.getElementById('scanOverlay').classList.remove('active');
+    hideCamAlert();
+  }
+}
+
+function toggleMute() {
+  muted = !muted;
+  const btn = document.getElementById('btnMute');
+  btn.textContent = muted ? '🔇' : '🔊';
+  btn.className = muted ? 'btn-mute muted' : 'btn-mute';
+}
+
+function setInterval_(ms, btn) {
+  scanInterval = ms;
+  document.querySelectorAll('.iv-btn').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+  if (isDetecting) {
+    clearInterval(scanTimer);
+    scanTimer = setInterval(doScan, scanInterval);
+  }
+}
+
+// Prompt for API key on load if empty
+window.addEventListener('load', () => {
+  if (!API_KEY) {
+    const key = prompt('Enter your Anthropic API key (or cancel to use simulation mode):\n\nYou can get one at console.anthropic.com');
+    if (key && key.trim()) {
+      // Store in memory
+      window._apiKey = key.trim();
+      document.querySelector('script').textContent = '';
+    }
+  }
+});
+
+// Override API_KEY with runtime input
+const origAnalyze = analyzeFrame;
+window.analyzeFrame = async function(b64) {
+  const key = window._apiKey || API_KEY;
+  if (!key) return simulateDetection();
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 256,
+      messages: [{
+        role: 'user',
+        content: [{
+          type: 'image',
+          source: { type: 'base64', media_type: 'image/jpeg', data: b64 }
+        },{
+          type: 'text',
+          text: 'Analyze this image. List ONLY animals present from: monkey, chimpanzee, langur, rhesus monkey. Respond in JSON only: {"animals":[{"name":"animal name","confidence":0-100,"threat":"high|medium|low"}]}. If none found: {"animals":[]}. No other text.'
+        }]
+      }]
+    })
+  });
+  const data = await res.json();
+  const txt = data.content?.[0]?.text || '{"animals":[]}';
+  try { return JSON.parse(txt.replace(/```json|```/g,'').trim()); }
+  catch { return {animals:[]}; }
+};
+// Replace the non-runtime version
+window.analyzeFrame = window.analyzeFrame;
+</script>
+</body>
+</html>
